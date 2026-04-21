@@ -2,10 +2,22 @@ import bcrypt from "bcrypt";
 import prisma from "../config/prisma.js";
 import jwt from "jsonwebtoken";
 
+const logAuthError = (scope, err) => {
+    console.error(`[Auth:${scope}]`, {
+        message: err?.message,
+        code: err?.code,
+        stack: err?.stack,
+    });
+};
+
 
 export const register = async (req,res)=>{
 
     const {email,password,name} = req.body;
+
+    if (!email || !password || !name) {
+        return res.status(400).json({ message: "name, email and password are required" });
+    }
 
     try {
     const existingUser = await prisma.user.findUnique({
@@ -36,9 +48,13 @@ export const register = async (req,res)=>{
 
     res.status(201).json({message:"User created successfully", token})
     }
-    catch (err) {
-        res.status(500).json({ message: "Server error" });
-      }
+        catch (err) {
+                logAuthError("register", err);
+                res.status(500).json({
+                        message: "Server error",
+                        error: process.env.NODE_ENV === "development" ? err?.message : undefined,
+                });
+            }
 
 }
 
@@ -46,6 +62,11 @@ export const login = async (req,res)=>{
 
 
     const {email,password} = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ message: "email and password are required" });
+    }
+
     try{
         const user = await prisma.user.findUnique({
             where:{
@@ -71,7 +92,11 @@ export const login = async (req,res)=>{
 
 
     }
-    catch (err) {
-        res.status(500).json({ message: "Server error" });
-      }
+        catch (err) {
+                logAuthError("login", err);
+                res.status(500).json({
+                        message: "Server error",
+                        error: process.env.NODE_ENV === "development" ? err?.message : undefined,
+                });
+            }
 }
